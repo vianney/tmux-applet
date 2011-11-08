@@ -103,18 +103,23 @@ void print_diskfree(const char* path) {
  * @param progname name of this program
  */
 int print_usage(char* progname) {
-    fprintf(stderr, "Usage: %s {l,m,d}\n", progname);
+    fprintf(stderr, "Usage: %1$s l[oad]\n"
+                    "       %1$s m[emory]\n"
+                    "       %1$s d[isk] PATH\n",
+            progname);
     return 1;
 }
 
 int main(int argc, char *argv[]) {
-    if(argc != 2)
+    if(argc < 2)
         return print_usage(argv[0]);
 
+#define OPTS(num) if(argc != (num) + 2) return print_usage(argv[0]);
+
     switch(argv[1][0]) {
-    case 'l':  print_load();             break;
-    case 'm':  print_meminfo();          break;
-    case 'd':  print_diskfree("/home");  break;
+    case 'l': OPTS(0); print_load();                      break;
+    case 'm': OPTS(0); print_meminfo();                   break;
+    case 'd': OPTS(1); print_diskfree(argv[2]);           break;
     default:
         return print_usage(argv[0]);
     }
