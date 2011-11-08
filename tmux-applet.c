@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/statvfs.h>
@@ -38,16 +39,12 @@ void print_size(unsigned long size, int magnitude) {
  * Print current load
  */
 void print_load() {
-    FILE *f;
-    char load[11];
-    int n;
+    double load;
     
-    f = fopen("/proc/loadavg", "r");
-    n = fscanf(f, "%10s", load);
-    if(n == EOF || n != 1)
+    if(getloadavg(&load, 1) != 1)
         return;
     
-    printf("%s", load);
+    printf("%.2f", load);
 }
 
 /**
