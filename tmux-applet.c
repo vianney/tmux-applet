@@ -22,13 +22,13 @@ char SIZE_SUFFIXES[] = {'B', 'k', 'M', 'G', 'T'};
  */
 void print_size(unsigned long size, int magnitude) {
     assert(magnitude >= 0 && magnitude <= 4);
-    if(magnitude == 4 || size < 1024L) {
+    if(magnitude == TERRABYTES || size < 1024L) {
         printf("%lu%c", size, SIZE_SUFFIXES[magnitude]);
     } else if(size < 10*1024L) {
-        printf("%lu.%lu%c", size / 1024L, (size % 1024L) / 103L,
+        printf("%lu.%lu%c", size >> 10, (size & 1023L) / 103L,
                             SIZE_SUFFIXES[magnitude+1]);
     } else {
-        print_size(size / 1024L, magnitude + 1);
+        print_size(size >> 10, magnitude + 1);
     }
 }
 
