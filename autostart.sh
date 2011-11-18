@@ -1,1 +1,1 @@
-[[ -z "$TMUX" ]] && tmux attach && exit
+[ -z "$TMUX" ] && exec tmux attach
