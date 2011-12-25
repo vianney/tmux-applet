@@ -20,13 +20,13 @@ char SIZE_SUFFIXES[] = {'B', 'k', 'M', 'G', 'T'};
  * @param magnitude order of magnitude of size (0 for bytes, 1 for kilobytes,
  *        etc., maximum 4 for terabytes)
  */
-void print_size(unsigned long size, int magnitude) {
+void print_size(unsigned long long size, int magnitude) {
     assert(magnitude >= 0 && magnitude <= 4);
-    if(magnitude == TERRABYTES || size < 1024L) {
-        printf("%lu%c", size, SIZE_SUFFIXES[magnitude]);
-    } else if(size < 10*1024L) {
-        printf("%lu.%lu%c", size >> 10, (size & 1023L) / 103L,
-                            SIZE_SUFFIXES[magnitude+1]);
+    if(magnitude == TERRABYTES || size < 1024) {
+        printf("%llu%c", size, SIZE_SUFFIXES[magnitude]);
+    } else if(size < 10*1024) {
+        printf("%llu.%llu%c", size >> 10, (size & 1023) / 103,
+                              SIZE_SUFFIXES[magnitude+1]);
     } else {
         print_size(size >> 10, magnitude + 1);
     }
@@ -84,14 +84,14 @@ void print_meminfo() {
 
 void print_diskfree(const char* path) {
     struct statvfs s;
-    unsigned long diskTotal, diskFree;
+    unsigned long long diskTotal, diskFree;
     
     if(statvfs(path, &s))
         return;
-    diskTotal = s.f_blocks * s.f_frsize;
-    diskFree = s.f_bavail * s.f_bsize;
+    diskTotal = (unsigned long long) s.f_blocks * s.f_frsize;
+    diskFree = (unsigned long long) s.f_bavail * s.f_bsize;
     
-    printf("%lu%%,", (diskTotal - diskFree) * 100 / diskTotal);
+    printf("%llu%%,", (diskTotal - diskFree) * 100 / diskTotal);
     print_size(diskFree, BYTES);
 }
 
