@@ -137,7 +137,7 @@ void applet_memory(FILE* fconf, const char* attributes) {
 void applet_disk(FILE* fconf, const char* attributes) {
     char path[128];
     struct statvfs s;
-    unsigned long long diskTotal, diskFree;
+    unsigned long long diskTotal, diskFree, diskAvail;
 
     path[0] = '\0';
     if(fscanf(fconf, "%127s", path) != 1 || statvfs(path, &s)) {
@@ -145,11 +145,12 @@ void applet_disk(FILE* fconf, const char* attributes) {
         return;
     }
     diskTotal = (unsigned long long) s.f_blocks * s.f_frsize;
-    diskFree = (unsigned long long) s.f_bavail * s.f_bsize;
+    diskFree = (unsigned long long) s.f_bfree * s.f_bsize;
+    diskAvail = (unsigned long long) s.f_bavail * s.f_bsize;
 
     begin_applet(attributes, "fg=magenta");
     printf("%llu#[nobright]%%,", (diskTotal - diskFree) * 100 / diskTotal);
-    print_size(diskFree, BYTES);
+    print_size(diskAvail, BYTES);
     end_applet();
 }
 
