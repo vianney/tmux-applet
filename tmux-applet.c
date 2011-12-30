@@ -63,7 +63,10 @@ void end_applet() {
 // Applets
 
 /**
- * Current load
+ * Name: load
+ * Parameters: (none)
+ * Default attributes: fg=yellow
+ * Description: print current load
  */
 void applet_load(FILE* fconf, const char* attributes) {
     double load;
@@ -77,7 +80,10 @@ void applet_load(FILE* fconf, const char* attributes) {
 }
 
 /**
- * Print available RAM
+ * Name: memory
+ * Parameters: (none)
+ * Default attributes: fg=green
+ * Description: print used RAM percentage and free RAM amount
  */
 void applet_memory(FILE* fconf, const char* attributes) {
     FILE* f;
@@ -113,6 +119,13 @@ void applet_memory(FILE* fconf, const char* attributes) {
     end_applet();
 }
 
+/**
+ * Name: disk
+ * Parameters: path
+ * Default attributes: fg=magenta
+ * Description: print used percentage of the filesystem mounted at path and
+ *     the free disk amount
+ */
 void applet_disk(FILE* fconf, const char* attributes) {
     char path[128];
     struct statvfs s;
