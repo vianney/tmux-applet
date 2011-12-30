@@ -23,39 +23,68 @@ char SIZE_SUFFIXES[] = {'B', 'k', 'M', 'G', 'T'};
 void print_size(unsigned long long size, int magnitude) {
     assert(magnitude >= 0 && magnitude <= 4);
     if(magnitude == TERRABYTES || size < 1024) {
-        printf("%llu%c", size, SIZE_SUFFIXES[magnitude]);
+        printf("#[bright]%llu#[nobright]%c", size, SIZE_SUFFIXES[magnitude]);
     } else if(size < 10*1024) {
-        printf("%llu.%llu%c", size >> 10, (size & 1023) / 103,
+        printf("#[bright]%llu.%llu#[nobright]%c", size >> 10, (size & 1023) / 103,
                               SIZE_SUFFIXES[magnitude+1]);
     } else {
         print_size(size >> 10, magnitude + 1);
     }
 }
 
+/**
+ * Number of applets (really) printed so far
+ */
+int nbApplets = 0;
+
+/**
+ * Begin printing of an applet.
+ *
+ * @param attr the attributes specified in the configuration file, or "" if none
+ * @param defattr the default attributes if attr == ""
+ */
+void begin_applet(const char* attr, const char* defattr) {
+    if(attr[0] == '\0')
+        attr = defattr;
+    if(nbApplets != 0)
+        printf("  ");
+    printf("#[bright,%s]", attr);
+}
+
+/**
+ * End printing of an applet.
+ */
+void end_applet() {
+    printf("#[default]");
+    nbApplets++;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Applets
 
 /**
- * Print current load
+ * Current load
  */
-void print_load() {
+void applet_load(FILE* fconf, const char* attributes) {
     double load;
-    
+
     if(getloadavg(&load, 1) != 1)
         return;
-    
+
+    begin_applet(attributes, "fg=yellow");
     printf("%.2f", load);
+    end_applet();
 }
 
 /**
  * Print available RAM
  */
-void print_meminfo() {
+void applet_memory(FILE* fconf, const char* attributes) {
     FILE* f;
     char key[31];
     int n, toRead;
     unsigned long value, memTotal, memFree, memBuffers, memCached;
-    
+
     f = fopen("/proc/meminfo", "r");
     toRead = 4;
     while((n = fscanf(f, "%30s %lu kB", key, &value)) != EOF) {
@@ -76,53 +105,85 @@ void print_meminfo() {
             break;
     }
     fclose(f);
-    
+
     memFree += memBuffers + memCached;
-    printf("%lu%%,", (memTotal - memFree) * 100 / memTotal);
+    begin_applet(attributes, "fg=green");
+    printf("%lu#[nobright]%%,", (memTotal - memFree) * 100 / memTotal);
     print_size(memFree, KILOBYTES);
+    end_applet();
 }
 
-void print_diskfree(const char* path) {
+void applet_disk(FILE* fconf, const char* attributes) {
+    char path[128];
     struct statvfs s;
     unsigned long long diskTotal, diskFree;
-    
-    if(statvfs(path, &s))
+
+    path[0] = '\0';
+    if(fscanf(fconf, "%127s", path) != 1 || statvfs(path, &s)) {
+        fprintf(stderr, "Unable to statvfs path '%s'\n", path);
         return;
+    }
     diskTotal = (unsigned long long) s.f_blocks * s.f_frsize;
     diskFree = (unsigned long long) s.f_bavail * s.f_bsize;
-    
-    printf("%llu%%,", (diskTotal - diskFree) * 100 / diskTotal);
+
+    begin_applet(attributes, "fg=magenta");
+    printf("%llu#[nobright]%%,", (diskTotal - diskFree) * 100 / diskTotal);
     print_size(diskFree, BYTES);
+    end_applet();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main program
 
-/**
- * Print usage notice
- * @param progname name of this program
- */
-int print_usage(char* progname) {
-    fprintf(stderr, "Usage: %1$s l[oad]\n"
-                    "       %1$s m[emory]\n"
-                    "       %1$s d[isk] PATH\n",
-            progname);
-    return 1;
-}
-
 int main(int argc, char *argv[]) {
-    if(argc < 2)
-        return print_usage(argv[0]);
+    FILE *fconf;
+    char applet[128], attributes[128];
+    int c, len;
 
-#define OPTS(num) if(argc != (num) + 2) return print_usage(argv[0]);
+#ifdef DEBUG
+    fconf = fopen("tmux-applet.conf", "r");
+#else
+    fconf = fopen("~/.tmux-applet.conf", "r");
+    if(fconf == NULL)
+        fconf = fopen("/etc/tmux-applet.conf", "r");
+#endif
 
-    switch(argv[1][0]) {
-    case 'l': OPTS(0); print_load();                      break;
-    case 'm': OPTS(0); print_meminfo();                   break;
-    case 'd': OPTS(1); print_diskfree(argv[2]);           break;
-    default:
-        return print_usage(argv[0]);
+    if(fconf == NULL) {
+        fprintf(stderr, "Unable to open configuration file.\n");
+        exit(1);
     }
+
+    attributes[0] = '\0';
+    while(fscanf(fconf, "%127s", applet) == 1) {
+        switch(applet[0]) {
+        case '#': // comment
+            do {
+                c = getc(fconf);
+            } while(c != EOF && c != '\n');
+            break;
+        case '[': // specify attributes
+            len = strlen(applet);
+            if(applet[len-1] != ']') {
+                fprintf(stderr, "Invalid attributes specification.\n");
+                exit(2);
+            }
+            memcpy(attributes, applet + 1, (len - 2)*sizeof(char));
+            attributes[len-2] = '\0';
+            break;
+        default: // applet
+            if(strcmp(applet, "load") == 0) {
+                applet_load(fconf, attributes);
+            } else if(strcmp(applet, "memory") == 0) {
+                applet_memory(fconf, attributes);
+            } else if(strcmp(applet, "disk") == 0) {
+                applet_disk(fconf, attributes);
+            } else {
+                fprintf(stderr, "Unknown applet '%s'.", applet);
+            }
+            attributes[0] = '\0'; // reset attributes
+        }
+    }
+
     printf("\n");
     return 0;
 }

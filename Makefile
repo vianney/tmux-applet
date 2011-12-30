@@ -1,9 +1,14 @@
 .PHONY: all clean
 
+CCFLAGS=-Wall
+ifdef DEBUG
+CCFLAGS+=-g -DDEBUG
+endif
+
 all: tmux-applet
 
 tmux-applet: tmux-applet.c
-	$(CC) -Wall -o $@ $+
+	$(CC) $(CCFLAGS) -o $@ $+
 
 clean:
 	rm tmux-applet
