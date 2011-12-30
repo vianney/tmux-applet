@@ -7,6 +7,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Utility functions
 
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
 char SIZE_SUFFIXES[] = {'B', 'k', 'M', 'G', 'T'};
 #define BYTES      0
 #define KILOBYTES  1
@@ -145,6 +153,42 @@ void applet_disk(FILE* fconf, const char* attributes) {
     end_applet();
 }
 
+/**
+ * Name: raid
+ * Parameters: (none)
+ * Default attributes: bg=red
+ * Description: show RAID when a raid array is degraded
+ */
+void applet_raid(FILE* fconf, const char* attributes) {
+    FILE* f;
+    char line[1024], *match;
+    int degraded;
+
+    f = fopen("/proc/mdstat", "r");
+    if(f == NULL)
+        return;
+
+    degraded = FALSE;
+    while(fgets(line, 1024, f) != NULL) {
+        if(strstr(line, " blocks ") != NULL) {
+            match = strrchr(line, '[');
+            if(match == NULL)
+                continue;
+            if(strchr(match + 1, '_') != NULL) {
+                degraded = TRUE;
+                break;
+            }
+        }
+    }
+    fclose(f);
+
+    if(degraded) {
+        begin_applet(attributes, "bg=red");
+        printf("RAID");
+        end_applet();
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Main program
 
@@ -190,8 +234,10 @@ int main(int argc, char *argv[]) {
                 applet_memory(fconf, attributes);
             } else if(strcmp(applet, "disk") == 0) {
                 applet_disk(fconf, attributes);
+            } else if(strcmp(applet, "raid") == 0) {
+                applet_raid(fconf, attributes);
             } else {
-                fprintf(stderr, "Unknown applet '%s'.", applet);
+                fprintf(stderr, "Unknown applet '%s'.\n", applet);
             }
             attributes[0] = '\0'; // reset attributes
         }

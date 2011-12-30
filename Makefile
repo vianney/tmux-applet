@@ -13,6 +13,7 @@ tmux-applet: tmux-applet.c
 ifdef DEBUG
 test: tmux-applet
 	PATH=.:$$PATH tmux -f tmux.conf
+	killall tmux
 endif
 
 clean:
