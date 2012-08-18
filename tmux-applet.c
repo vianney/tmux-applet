@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/param.h>
 #include <sys/statvfs.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -197,11 +198,16 @@ int main(int argc, char *argv[]) {
     FILE *fconf;
     char applet[128], attributes[128];
     int c, len;
+#ifndef DEBUG
+    char filename[MAXPATHLEN];
+#endif
 
 #ifdef DEBUG
     fconf = fopen("tmux-applet.conf", "r");
 #else
-    fconf = fopen("~/.tmux-applet.conf", "r");
+    strcpy(filename, getenv("HOME"));
+    strcat(filename, "/.tmux-applet.conf");
+    fconf = fopen(filename, "r");
     if(fconf == NULL)
         fconf = fopen("/etc/tmux-applet.conf", "r");
 #endif
