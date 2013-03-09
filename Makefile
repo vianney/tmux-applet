@@ -13,17 +13,26 @@
 # You should have received a copy of the GNU General Public License
 # along with This program.  If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all test clean
+.PHONY: all test install clean
+
+DESTDIR ?=
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+ETCDIR ?= $(PREFIX)/etc
+SHAREDIR ?= $(PREFIX)/share/tmux-applet
 
 CCFLAGS=-Wall
 ifdef DEBUG
 CCFLAGS+=-g -DDEBUG
 endif
 
-all: tmux-applet
+all: tmux-applet autostart.sh
 
 tmux-applet: tmux-applet.c
 	$(CC) $(CCFLAGS) -o $@ $+
+
+autostart.sh: autostart.sh.in
+	sed "s@%SHAREDIR%@$(SHAREDIR)@g" $< >$@
 
 ifdef DEBUG
 test: tmux-applet
@@ -31,7 +40,14 @@ test: tmux-applet
 	killall tmux
 endif
 
+install: tmux-applet autostart.sh
+	install -Dm755 tmux-applet "$(DESTDIR)$(BINDIR)/tmux-applet"
+	install -Dm644 tmux-applet.conf "$(DESTDIR)$(ETCDIR)/tmux-applet.conf"
+	install -Dm644 tmux.conf "$(DESTDIR)$(SHAREDIR)/tmux.conf"
+	install -Dm644 autostart.sh "$(DESTDIR)$(SHAREDIR)/autostart.sh"
+
 clean:
-	rm tmux-applet
+	-rm tmux-applet
+	-rm autostart.sh
 
 # vim:set sw=4 ts=4 noet:
