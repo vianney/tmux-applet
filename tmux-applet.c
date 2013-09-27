@@ -114,7 +114,8 @@ void applet_memory(FILE* fconf, const char* attributes) {
     FILE* f;
     char key[31];
     int n, toRead;
-    unsigned long value, memTotal, memFree, memBuffers, memCached;
+    unsigned long value;
+    unsigned long memTotal = 0, memFree = 0, memBuffers = 0, memCached = 0;
 
     f = fopen("/proc/meminfo", "r");
     toRead = 4;
