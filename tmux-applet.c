@@ -118,6 +118,9 @@ void applet_memory(FILE* fconf, const char* attributes) {
     unsigned long memTotal = 0, memFree = 0, memBuffers = 0, memCached = 0;
 
     f = fopen("/proc/meminfo", "r");
+    if(f == NULL)
+        return;
+
     toRead = 4;
     while((n = fscanf(f, "%30s %lu kB", key, &value)) != EOF) {
         if(n != 2)
