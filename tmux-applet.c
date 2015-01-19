@@ -21,6 +21,12 @@
 #include <sys/param.h>
 #include <sys/statvfs.h>
 
+#ifdef BSD
+#include <unistd.h>
+#include <sys/sysctl.h>
+#include <vm/vm_param.h>
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Utility functions
 
@@ -30,6 +36,28 @@
 
 #ifndef TRUE
 #define TRUE 1
+#endif
+
+#ifdef BSD
+/**
+ * Get a value from the BSD sysctl interface.
+ * @param name the name of the value to query
+ * @param buffer output buffer
+ * @param len length of the parameter
+ * @return TRUE if successful, FALSE otherwise
+ */
+int getsysctl(const char* name, void* buffer, size_t len) {
+    size_t newlen = len;
+    if(sysctlbyname(name, buffer, &newlen, NULL, 0) != 0) {
+        perror("sysctl");
+        return FALSE;
+    }
+    if(newlen != len) {
+        fprintf(stderr, "sysctl: expected size %lu, got %lu\n", len, newlen);
+        return FALSE;
+    }
+    return TRUE;
+}
 #endif
 
 char SIZE_SUFFIXES[] = {'B', 'k', 'M', 'G', 'T'};
@@ -111,11 +139,35 @@ void applet_load(FILE* fconf, const char* attributes) {
  * Description: print used RAM percentage and free RAM amount
  */
 void applet_memory(FILE* fconf, const char* attributes) {
+    unsigned long memTotal = 0, memFree = 0;
+
+#ifdef BSD
+
+    unsigned inactiveCount, cacheCount, freeCount;
+
+    if(!getsysctl("hw.physmem", &memTotal, sizeof(memTotal)))
+        return;
+    if(!getsysctl("vm.stats.vm.v_inactive_count",
+                  &inactiveCount, sizeof(inactiveCount)))
+        return;
+    if(!getsysctl("vm.stats.vm.v_cache_count",
+                  &cacheCount, sizeof(cacheCount)))
+        return;
+    if(!getsysctl("vm.stats.vm.v_free_count",
+                  &freeCount, sizeof(freeCount)))
+        return;
+
+    memTotal /= 1024;
+    memFree = inactiveCount + cacheCount + freeCount;
+    memFree = memFree * getpagesize() / 1024;
+
+#else
+
     FILE* f;
     char key[31];
     int n, toRead;
     unsigned long value;
-    unsigned long memTotal = 0, memFree = 0, memBuffers = 0, memCached = 0;
+    unsigned long memBuffers = 0, memCached = 0;
 
     f = fopen("/proc/meminfo", "r");
     if(f == NULL)
@@ -140,8 +192,13 @@ void applet_memory(FILE* fconf, const char* attributes) {
             break;
     }
     fclose(f);
-
     memFree += memBuffers + memCached;
+
+#endif
+
+    if(memTotal == 0)
+        return;
+
     begin_applet(attributes, "fg=green");
     printf("%lu#[nobright]%%,", (memTotal - memFree) * 100 / memTotal);
     print_size(memFree, KILOBYTES);
