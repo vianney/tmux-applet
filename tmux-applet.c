@@ -167,32 +167,31 @@ void applet_memory(FILE* fconf, const char* attributes) {
     char key[31];
     int n, toRead;
     unsigned long value;
-    unsigned long memBuffers = 0, memCached = 0;
 
     f = fopen("/proc/meminfo", "r");
     if(f == NULL)
         return;
 
-    toRead = 4;
+    toRead = 3; // values left to read for memFree
     while((n = fscanf(f, "%30s %lu kB", key, &value)) != EOF) {
         if(n != 2)
             continue;
-        if(strcmp(key, "MemTotal:") == 0)
+        if(strcmp(key, "MemTotal:") == 0) {
             memTotal = value;
-        else if(strcmp(key, "MemFree:") == 0)
+        } else if(strcmp(key, "MemAvailable:") == 0) {
             memFree = value;
-        else if(strcmp(key, "Buffers:") == 0)
-            memBuffers = value;
-        else if(strcmp(key, "Cached:") == 0)
-            memCached = value;
-        else
-            continue;
-        toRead--;
-        if(toRead == 0)
+            toRead = 0;
+        } else if(toRead > 0 &&
+                  (strcmp(key, "MemFree:") == 0 ||
+                   strcmp(key, "Buffers:") == 0 ||
+                   strcmp(key, "Cached:") == 0)) {
+            memFree += value;
+            toRead--;
+        }
+        if(memTotal > 0 && toRead == 0)
             break;
     }
     fclose(f);
-    memFree += memBuffers + memCached;
 
 #endif
 
