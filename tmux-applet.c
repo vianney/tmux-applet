@@ -222,6 +222,9 @@ void applet_disk(FILE* fconf, const char* attributes) {
         return;
     }
 
+    if(s.f_blocks == 0)
+        return;
+
     begin_applet(attributes, "fg=magenta");
     printf("%llu#[nobright]%%,",
            (s.f_blocks - s.f_bfree) * 100ULL / s.f_blocks);
