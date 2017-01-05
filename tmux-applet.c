@@ -199,8 +199,8 @@ void applet_memory(FILE* fconf, const char* attributes) {
         return;
 
     begin_applet(attributes, "fg=green");
-    printf("%lu#[nobright]%%,", (memTotal - memFree) * 100 / memTotal);
     print_size(memFree, KILOBYTES);
+    printf(" (%lu#[nobright]%%)", (memTotal - memFree) * 100 / memTotal);
     end_applet();
 }
 
@@ -225,9 +225,9 @@ void applet_disk(FILE* fconf, const char* attributes) {
         return;
 
     begin_applet(attributes, "fg=magenta");
-    printf("%llu#[nobright]%%,",
-           (s.f_blocks - s.f_bfree) * 100ULL / s.f_blocks);
     print_size((unsigned long long) s.f_bavail * s.f_frsize, BYTES);
+    printf(" (%llu#[nobright]%%)",
+           (s.f_blocks - s.f_bfree) * 100ULL / s.f_blocks);
     end_applet();
 }
 
